@@ -1,0 +1,1050 @@
+{
+  "risk_score": 100,
+  "executive_summary": "This web_application has 98 security findings with critical risk level. The most severe issue is hardcoded_secret which requires immediate attention. 73 high-priority issues should be fixed before deployment.",
+  "triage": {
+    "languages": [
+      "javascript"
+    ],
+    "frameworks": [
+      "express",
+      "sequelize",
+      "passport"
+    ],
+    "app_type": "web_application",
+    "overall_risk_level": "critical"
+  },
+  "owasp_coverage": {
+    "A02_Cryptographic_Failures": 6,
+    "A03_Injection": 15,
+    "A07_Auth_Failures": 10,
+    "A01_Broken_Access_Control": 2,
+    "A05_Security_Misconfiguration": 42,
+    "A09_Logging_Failures": 23
+  },
+  "top_priority_actions": [
+    {
+      "priority": 1,
+      "file": "server.js",
+      "line": 20,
+      "action": "Hardcoded session secret 'keyboard cat' exposed in code. Session secrets should be stored in environment variables.",
+      "code_fix": "Move the secret to an environment variable: secret: process.env.SESSION_SECRET || 'fallback-secret'"
+    },
+    {
+      "priority": 2,
+      "file": "core/appHandler.js",
+      "line": 10,
+      "action": "SQL injection vulnerability in userSearch function. User input from req.body.login is directly concatenated into SQL query without parameterization, which could allow SQL injection attacks.",
+      "code_fix": "Use parameterized queries or Sequelize's built-in query methods with proper parameter binding instead of string concatenation."
+    },
+    {
+      "priority": 3,
+      "file": "core/appHandler.js",
+      "line": 30,
+      "action": "Command injection vulnerability in ping function. User input from req.body.address is directly passed to exec() without sanitization, allowing arbitrary command execution.",
+      "code_fix": "Use child_process.execFile() with arguments array instead of exec(), or validate/sanitize the address input strictly (e.g., validate IP format)."
+    }
+  ],
+  "findings": [
+    {
+      "id": "SECRETS-0",
+      "severity": "high",
+      "type": "hardcoded_secret",
+      "file": "server.js",
+      "line": 20,
+      "description": "Hardcoded session secret 'keyboard cat' exposed in code. Session secrets should be stored in environment variables.",
+      "remediation": "Move the secret to an environment variable: secret: process.env.SESSION_SECRET || 'fallback-secret'",
+      "owasp_category": "A02_Cryptographic_Failures"
+    },
+    {
+      "id": "XSS-0",
+      "severity": "high",
+      "type": "XSS",
+      "file": "core/appHandler.js",
+      "line": 10,
+      "description": "SQL injection vulnerability in userSearch function. User input from req.body.login is directly concatenated into SQL query without parameterization, which could allow SQL injection attacks.",
+      "remediation": "Use parameterized queries or Sequelize's built-in query methods with proper parameter binding instead of string concatenation.",
+      "owasp_category": "A03_Injection"
+    },
+    {
+      "id": "XSS-1",
+      "severity": "high",
+      "type": "XSS",
+      "file": "core/appHandler.js",
+      "line": 30,
+      "description": "Command injection vulnerability in ping function. User input from req.body.address is directly passed to exec() without sanitization, allowing arbitrary command execution.",
+      "remediation": "Use child_process.execFile() with arguments array instead of exec(), or validate/sanitize the address input strictly (e.g., validate IP format).",
+      "owasp_category": "A03_Injection"
+    },
+    {
+      "id": "XSS-2",
+      "severity": "high",
+      "type": "XSS",
+      "file": "core/appHandler.js",
+      "line": 145,
+      "description": "Unsafe deserialization vulnerability in bulkProductsLegacy function. User-supplied file data is deserialized using node-serialize.unserialize() without validation, which can lead to arbitrary code execution.",
+      "remediation": "Avoid using node-serialize.unserialize() on untrusted input. Use JSON.parse() instead or implement strict validation before deserialization.",
+      "owasp_category": "A03_Injection"
+    },
+    {
+      "id": "XSS-3",
+      "severity": "high",
+      "type": "XSS",
+      "file": "core/appHandler.js",
+      "line": 160,
+      "description": "XXE (XML External Entity) vulnerability in bulkProducts function. XML parsing with libxmljs is configured with {noent:true} which enables entity expansion, allowing XXE attacks.",
+      "remediation": "Remove the 'noent:true' option from libxmljs.parseXmlString() call to disable entity expansion and prevent XXE attacks.",
+      "owasp_category": "A03_Injection"
+    },
+    {
+      "id": "AUTH-4",
+      "severity": "high",
+      "type": "AUTH",
+      "file": "core/authHandler.js",
+      "line": 38,
+      "description": "No rate limiting on login attempts. Enables brute force attacks on user credentials.",
+      "remediation": "Implement rate limiting using express-rate-limit: max 5 attempts per 15 minutes per IP/username",
+      "owasp_category": "A07_Auth_Failures"
+    },
+    {
+      "id": "AUTH-5",
+      "severity": "high",
+      "type": "AUTH",
+      "file": "routes/main.js",
+      "line": 38,
+      "description": "Logout endpoint (GET /logout) uses GET request. Vulnerable to CSRF attacks - attackers can force logout via malicious links.",
+      "remediation": "Change to POST request with CSRF token validation using csurf middleware",
+      "owasp_category": "A07_Auth_Failures"
+    },
+    {
+      "id": "AUTH-6",
+      "severity": "high",
+      "type": "AUTH",
+      "file": "core/authHandler.js",
+      "line": 30,
+      "description": "No session destruction on logout. Session data persists server-side, allowing potential session reuse.",
+      "remediation": "Add req.session.destroy(callback) in logout handler to invalidate session server-side",
+      "owasp_category": "A07_Auth_Failures"
+    },
+    {
+      "id": "INJECTION-4",
+      "severity": "high",
+      "type": "INJECTION",
+      "file": "core/appHandler.js",
+      "line": 130,
+      "description": "XXE (XML External Entity) Injection in bulkProducts: XML parsing with {noent:true} enables entity expansion attacks",
+      "remediation": "Remove noent:true option and use {noent:false, noblanks:true} to disable external entity processing",
+      "owasp_category": "A03_Injection"
+    },
+    {
+      "id": "INJECTION-5",
+      "severity": "high",
+      "type": "INJECTION",
+      "file": "core/appHandler.js",
+      "line": 89,
+      "description": "Open Redirect in redirect function: User input from req.query.url is passed directly to res.redirect() without validation",
+      "remediation": "Validate URL against whitelist of allowed domains or use URL.parse() to ensure same-origin redirects",
+      "owasp_category": "A03_Injection"
+    },
+    {
+      "id": "IDOR-0",
+      "severity": "high",
+      "type": "IDOR",
+      "file": "core/appHandler.js",
+      "line": 70,
+      "description": "userEditSubmit function fetches user by ID from request body without verifying ownership. An attacker can modify any user's email/password by changing req.body.id to target another user's ID.",
+      "remediation": "Verify that req.body.id matches req.user.id before allowing modifications: if (req.body.id != req.user.id) { return res.status(403).send('Unauthorized'); }",
+      "owasp_category": "A01_Broken_Access_Control"
+    },
+    {
+      "id": "IDOR-1",
+      "severity": "high",
+      "type": "IDOR",
+      "file": "core/appHandler.js",
+      "line": 50,
+      "description": "modifyProduct function fetches product by ID from query parameter without any authorization check. Any authenticated user can view/modify any product by changing the ID.",
+      "remediation": "Implement product ownership verification or role-based access control before rendering product details.",
+      "owasp_category": "A01_Broken_Access_Control"
+    },
+    {
+      "id": "IDOR-2",
+      "severity": "high",
+      "type": "SSRF",
+      "file": "core/appHandler.js",
+      "line": 110,
+      "description": "redirect function accepts user-supplied URL in req.query.url and redirects without validation. Attacker can redirect to arbitrary URLs including internal services.",
+      "remediation": "Implement URL whitelist validation or use URL.parse() to ensure only safe redirects: const url = new URL(req.query.url); if (!whitelist.includes(url.hostname)) { return res.status(400).send('Invalid redirect'); }",
+      "owasp_category": "A05_Security_Misconfiguration"
+    },
+    {
+      "id": "IDOR-3",
+      "severity": "high",
+      "type": "Broken Access Control",
+      "file": "core/appHandler.js",
+      "line": 125,
+      "description": "listUsersAPI endpoint returns all users without role verification. Should restrict to admin users only.",
+      "remediation": "Add role check: if (req.user.role !== 'admin') { return res.status(403).json({error: 'Unauthorized'}); }",
+      "owasp_category": "A05_Security_Misconfiguration"
+    },
+    {
+      "id": "MISCONFIG-7",
+      "severity": "high",
+      "type": "MISCONFIG",
+      "file": "core/appHandler.js",
+      "line": 139,
+      "description": "Sensitive data exposure: listUsersAPI returns all user records including password hashes without authorization check.",
+      "remediation": "Implement role-based access control. Exclude password field from response. Add admin-only check.",
+      "owasp_category": "A05_Security_Misconfiguration"
+    },
+    {
+      "id": "MISCONFIG-8",
+      "severity": "high",
+      "type": "MISCONFIG",
+      "file": "server.js",
+      "line": 24,
+      "description": "Session cookie has secure:false, allowing transmission over HTTP and exposure to MITM attacks.",
+      "remediation": "Set secure:true (HTTPS only) and httpOnly:true in production environment.",
+      "owasp_category": "A05_Security_Misconfiguration"
+    },
+    {
+      "id": "MISCONFIG-9",
+      "severity": "high",
+      "type": "MISCONFIG",
+      "file": "server.js",
+      "line": 1,
+      "description": "Missing security headers: No X-Frame-Options, X-Content-Type-Options, Content-Security-Policy, or HSTS headers.",
+      "remediation": "Add helmet.js middleware or manually set: X-Frame-Options: DENY, X-Content-Type-Options: nosniff, CSP headers.",
+      "owasp_category": "A05_Security_Misconfiguration"
+    },
+    {
+      "id": "MISCONFIG-10",
+      "severity": "high",
+      "type": "MISCONFIG",
+      "file": "core/authHandler.js",
+      "line": 30,
+      "description": "User enumeration vulnerability: Different error messages for 'user not found' vs 'invalid password' leak user existence.",
+      "remediation": "Return generic error message for both cases: 'Invalid credentials'.",
+      "owasp_category": "A05_Security_Misconfiguration"
+    },
+    {
+      "id": "MISCONFIG-11",
+      "severity": "high",
+      "type": "MISCONFIG",
+      "file": "core/appHandler.js",
+      "line": 189,
+      "description": "Expression injection in mathjs.eval(): User input directly evaluated as math expression allows code execution.",
+      "remediation": "Use mathjs.compile() with restricted scope or validate input against whitelist of safe operations.",
+      "owasp_category": "A05_Security_Misconfiguration"
+    },
+    {
+      "id": "CRYPTO-2",
+      "severity": "high",
+      "type": "CRYPTO",
+      "file": "server.js",
+      "line": 21,
+      "description": "Session secret is hardcoded as 'keyboard cat'. Hardcoded secrets are insecure and should be loaded from environment variables.",
+      "remediation": "Move the session secret to an environment variable: process.env.SESSION_SECRET with a strong random value.",
+      "owasp_category": "A02_Cryptographic_Failures"
+    },
+    {
+      "id": "LOGGING-1",
+      "severity": "high",
+      "type": "LOGGING",
+      "file": "core/authHandler.js",
+      "line": 30,
+      "description": "Password reset requests are not logged. No audit trail for password reset operations, which are sensitive security events.",
+      "remediation": "Log all password reset requests including username, timestamp, and whether the reset was successful or failed.",
+      "owasp_category": "A09_Logging_Failures"
+    },
+    {
+      "id": "LOGGING-2",
+      "severity": "high",
+      "type": "LOGGING",
+      "file": "core/appHandler.js",
+      "line": 5,
+      "description": "SQL injection vulnerability in userSearch function is not logged. No audit trail for suspicious database queries or injection attempts.",
+      "remediation": "Log all database queries, especially those with user input. Log failed queries and potential injection attempts with full context.",
+      "owasp_category": "A09_Logging_Failures"
+    },
+    {
+      "id": "LOGGING-3",
+      "severity": "high",
+      "type": "LOGGING",
+      "file": "core/appHandler.js",
+      "line": 18,
+      "description": "Command injection vulnerability in ping function has no logging. No audit trail for command execution or injection attempts.",
+      "remediation": "Log all command executions with user input, including the command and parameters. Log execution failures and errors.",
+      "owasp_category": "A09_Logging_Failures"
+    },
+    {
+      "id": "LOGGING-4",
+      "severity": "high",
+      "type": "LOGGING",
+      "file": "core/appHandler.js",
+      "line": 115,
+      "description": "Admin API endpoint (listUsersAPI) returns all user data without logging access. No audit trail for sensitive data access.",
+      "remediation": "Log all access to admin endpoints including user ID, timestamp, and data accessed. Flag unauthorized access attempts.",
+      "owasp_category": "A09_Logging_Failures"
+    },
+    {
+      "id": "LOGGING-5",
+      "severity": "high",
+      "type": "LOGGING",
+      "file": "core/appHandler.js",
+      "line": 75,
+      "description": "User profile modifications (userEditSubmit) are not logged. No audit trail for changes to user accounts, passwords, or email addresses.",
+      "remediation": "Log all user profile changes including what was modified, by whom, and when. Include old and new values for sensitive fields.",
+      "owasp_category": "A09_Logging_Failures"
+    },
+    {
+      "id": "LOGGING-9",
+      "severity": "high",
+      "type": "LOGGING",
+      "file": "core/appHandler.js",
+      "line": 125,
+      "description": "File upload operations (bulkProducts, bulkProductsLegacy) are not logged. No audit trail for bulk data imports or file processing.",
+      "remediation": "Log all file uploads including filename, file size, user ID, timestamp, and processing results (success/failure).",
+      "owasp_category": "A09_Logging_Failures"
+    },
+    {
+      "id": "LOGGING-11",
+      "severity": "high",
+      "type": "LOGGING",
+      "file": "core/passport.js",
+      "line": 25,
+      "description": "Login failures in passport strategy are not logged. No audit trail for failed authentication attempts, making brute force detection impossible.",
+      "remediation": "Log all login attempts (successful and failed) with username, timestamp, and IP address. Use structured logging with severity levels.",
+      "owasp_category": "A09_Logging_Failures"
+    },
+    {
+      "id": "LOGGING-12",
+      "severity": "high",
+      "type": "LOGGING",
+      "file": "core/passport.js",
+      "line": 45,
+      "description": "User registration attempts are not logged. No audit trail for new account creation or registration failures.",
+      "remediation": "Log all registration attempts including email, username, timestamp, and success/failure status.",
+      "owasp_category": "A09_Logging_Failures"
+    },
+    {
+      "id": "PII_LOGGING-0",
+      "severity": "high",
+      "type": "PII_LEAK",
+      "file": "core/authHandler.js",
+      "line": 57,
+      "description": "Password reset token validation uses weak MD5 hash of login username. Token is passed in query parameters and rendered in HTML, exposing it in browser history and logs.",
+      "remediation": "Use cryptographically secure token generation (e.g., crypto.randomBytes), store hashed tokens server-side, and pass tokens only via POST or secure cookies, not query parameters.",
+      "owasp_category": "A09_Logging_Failures"
+    },
+    {
+      "id": "PII_LOGGING-1",
+      "severity": "high",
+      "type": "PII_LEAK",
+      "file": "core/authHandler.js",
+      "line": 75,
+      "description": "Password reset form renders login and token in HTML response, exposing sensitive reset token in response body which may be logged or cached.",
+      "remediation": "Store reset token in session/server-side only. Do not render tokens in HTML responses. Use session-based validation instead.",
+      "owasp_category": "A09_Logging_Failures"
+    },
+    {
+      "id": "PII_LOGGING-2",
+      "severity": "high",
+      "type": "PII_LEAK",
+      "file": "server.js",
+      "line": 24,
+      "description": "Session secret is hardcoded as 'keyboard cat', a well-known default. This compromises session security and user authentication tokens.",
+      "remediation": "Use a strong, randomly generated secret from environment variables (process.env.SESSION_SECRET) with minimum 32 characters of entropy.",
+      "owasp_category": "A09_Logging_Failures"
+    },
+    {
+      "id": "PII_LOGGING-4",
+      "severity": "high",
+      "type": "PII_LEAK",
+      "file": "core/appHandler.js",
+      "line": 130,
+      "description": "listUsersAPI endpoint returns all user records including password hashes in JSON response without authentication checks beyond isAuthenticated.",
+      "remediation": "Exclude sensitive fields from response: res.json({success: true, users: users.map(u => ({id: u.id, name: u.name, email: u.email}))}). Add role-based access control.",
+      "owasp_category": "A09_Logging_Failures"
+    },
+    {
+      "id": "PII_LOGGING-6",
+      "severity": "high",
+      "type": "PII_LEAK",
+      "file": "core/appHandler.js",
+      "line": 148,
+      "description": "XXE (XML External Entity) vulnerability in bulkProducts. libxmljs is configured with {noent:true} which enables entity expansion, allowing attackers to read sensitive files or cause DoS.",
+      "remediation": "Remove noent:true option. Use: libxmljs.parseXmlString(data, {noent:false, noblanks:true})",
+      "owasp_category": "A09_Logging_Failures"
+    },
+    {
+      "id": "PII_LOGGING-7",
+      "severity": "high",
+      "type": "PII_LEAK",
+      "file": "core/appHandler.js",
+      "line": 20,
+      "description": "Command injection vulnerability in ping function. User input (req.body.address) is directly passed to exec() without sanitization, allowing arbitrary command execution.",
+      "remediation": "Use child_process.execFile() with arguments array instead of exec(). Validate input against whitelist of valid IP addresses.",
+      "owasp_category": "A09_Logging_Failures"
+    },
+    {
+      "id": "EXCEPTION-0",
+      "severity": "high",
+      "type": "EXCEPTION",
+      "file": "core/authHandler.js",
+      "line": 28,
+      "description": "Missing error handling in forgotPw promise chain. Unhandled promise rejection if database query fails.",
+      "remediation": "Add .catch() handler to the promise chain to handle database errors gracefully",
+      "owasp_category": "A05_Security_Misconfiguration"
+    },
+    {
+      "id": "EXCEPTION-1",
+      "severity": "high",
+      "type": "EXCEPTION",
+      "file": "core/authHandler.js",
+      "line": 48,
+      "description": "Missing error handling in resetPw promise chain. Unhandled promise rejection if database query fails.",
+      "remediation": "Add .catch() handler to the promise chain to handle database errors gracefully",
+      "owasp_category": "A05_Security_Misconfiguration"
+    },
+    {
+      "id": "EXCEPTION-2",
+      "severity": "high",
+      "type": "EXCEPTION",
+      "file": "core/authHandler.js",
+      "line": 72,
+      "description": "Missing error handling in resetPwSubmit promise chain. Unhandled promise rejection if database query or save fails.",
+      "remediation": "Add .catch() handler to the promise chain to handle database errors gracefully",
+      "owasp_category": "A05_Security_Misconfiguration"
+    },
+    {
+      "id": "EXCEPTION-4",
+      "severity": "high",
+      "type": "EXCEPTION",
+      "file": "core/appHandler.js",
+      "line": 20,
+      "description": "Missing error handling in userSearch catch block. Error details may be exposed to client.",
+      "remediation": "Log error server-side and return generic error message to client instead of exposing internal error details",
+      "owasp_category": "A05_Security_Misconfiguration"
+    },
+    {
+      "id": "EXCEPTION-5",
+      "severity": "high",
+      "type": "EXCEPTION",
+      "file": "core/appHandler.js",
+      "line": 28,
+      "description": "Command injection vulnerability in ping function. User input directly passed to exec() without sanitization.",
+      "remediation": "Use child_process.execFile() with arguments array instead of exec(), or validate/sanitize input strictly",
+      "owasp_category": "A05_Security_Misconfiguration"
+    },
+    {
+      "id": "EXCEPTION-6",
+      "severity": "high",
+      "type": "EXCEPTION",
+      "file": "core/appHandler.js",
+      "line": 35,
+      "description": "Missing error handling in listProducts promise. Unhandled promise rejection if database query fails.",
+      "remediation": "Add .catch() handler to handle database errors gracefully",
+      "owasp_category": "A05_Security_Misconfiguration"
+    },
+    {
+      "id": "EXCEPTION-7",
+      "severity": "high",
+      "type": "EXCEPTION",
+      "file": "core/appHandler.js",
+      "line": 45,
+      "description": "Missing error handling in productSearch promise. Unhandled promise rejection if database query fails.",
+      "remediation": "Add .catch() handler to handle database errors gracefully",
+      "owasp_category": "A05_Security_Misconfiguration"
+    },
+    {
+      "id": "EXCEPTION-8",
+      "severity": "high",
+      "type": "EXCEPTION",
+      "file": "core/appHandler.js",
+      "line": 57,
+      "description": "Missing error handling in modifyProduct promise. Unhandled promise rejection if database query fails.",
+      "remediation": "Add .catch() handler to handle database errors gracefully",
+      "owasp_category": "A05_Security_Misconfiguration"
+    },
+    {
+      "id": "EXCEPTION-9",
+      "severity": "high",
+      "type": "EXCEPTION",
+      "file": "core/appHandler.js",
+      "line": 130,
+      "description": "Missing error handling in userEditSubmit promise. Unhandled promise rejection if database query or save fails.",
+      "remediation": "Add .catch() handler to handle database errors gracefully",
+      "owasp_category": "A05_Security_Misconfiguration"
+    },
+    {
+      "id": "EXCEPTION-11",
+      "severity": "high",
+      "type": "EXCEPTION",
+      "file": "core/appHandler.js",
+      "line": 165,
+      "description": "Expression injection vulnerability in calc function. User input passed directly to mathjs.eval() without sanitization.",
+      "remediation": "Use a safe math parser or validate input strictly to prevent arbitrary code execution",
+      "owasp_category": "A05_Security_Misconfiguration"
+    },
+    {
+      "id": "EXCEPTION-12",
+      "severity": "high",
+      "type": "EXCEPTION",
+      "file": "core/appHandler.js",
+      "line": 176,
+      "description": "Missing error handling in listUsersAPI promise. Unhandled promise rejection if database query fails. Sensitive user data exposed in API response.",
+      "remediation": "Add .catch() handler and filter sensitive fields (passwords) from API response",
+      "owasp_category": "A05_Security_Misconfiguration"
+    },
+    {
+      "id": "EXCEPTION-14",
+      "severity": "high",
+      "type": "EXCEPTION",
+      "file": "core/appHandler.js",
+      "line": 184,
+      "description": "Missing error handling in bulkProductsLegacy. Unhandled promise rejection if database save fails.",
+      "remediation": "Add .catch() handler to handle database errors gracefully",
+      "owasp_category": "A05_Security_Misconfiguration"
+    },
+    {
+      "id": "EXCEPTION-15",
+      "severity": "high",
+      "type": "EXCEPTION",
+      "file": "core/appHandler.js",
+      "line": 200,
+      "description": "XXE (XML External Entity) vulnerability in bulkProducts. XML parsing with noent:true enables entity expansion attacks.",
+      "remediation": "Set noent:false and disable DTD processing. Validate XML structure before parsing.",
+      "owasp_category": "A05_Security_Misconfiguration"
+    },
+    {
+      "id": "EXCEPTION-16",
+      "severity": "high",
+      "type": "EXCEPTION",
+      "file": "core/appHandler.js",
+      "line": 200,
+      "description": "Missing error handling in bulkProducts. Unhandled promise rejection if database save fails.",
+      "remediation": "Add .catch() handler to handle database errors gracefully",
+      "owasp_category": "A05_Security_Misconfiguration"
+    },
+    {
+      "id": "XSS-4",
+      "severity": "medium",
+      "type": "XSS",
+      "file": "core/appHandler.js",
+      "line": 135,
+      "description": "Open redirect vulnerability in redirect function. User input from req.query.url is directly used in res.redirect() without validation, allowing attackers to redirect users to arbitrary URLs.",
+      "remediation": "Validate the redirect URL against a whitelist of allowed domains or use a URL parsing library to ensure the URL is relative or from an allowed domain.",
+      "owasp_category": "A03_Injection"
+    },
+    {
+      "id": "XSS-5",
+      "severity": "medium",
+      "type": "XSS",
+      "file": "core/authHandler.js",
+      "line": 48,
+      "description": "Potential XSS vulnerability in resetPw function. User input from req.query.login and req.query.token are passed directly to res.render() without escaping, which could be reflected in the template.",
+      "remediation": "Ensure the template engine (EJS) properly escapes these values by default, or explicitly escape them if necessary. Validate input format.",
+      "owasp_category": "A03_Injection"
+    },
+    {
+      "id": "XSS-6",
+      "severity": "medium",
+      "type": "XSS",
+      "file": "core/authHandler.js",
+      "line": 75,
+      "description": "Potential XSS vulnerability in resetPwSubmit function. User input from req.query.login and req.query.token are passed to res.render() without validation.",
+      "remediation": "Validate and sanitize query parameters before passing to template. Use POST data instead of query parameters for sensitive operations.",
+      "owasp_category": "A03_Injection"
+    },
+    {
+      "id": "XSS-7",
+      "severity": "medium",
+      "type": "XSS",
+      "file": "routes/main.js",
+      "line": 18,
+      "description": "Potential path traversal/template injection vulnerability. User input from req.params.vuln is used to construct template paths without validation, allowing access to arbitrary template files.",
+      "remediation": "Validate req.params.vuln against a whitelist of allowed vulnerability names before using it in template path construction.",
+      "owasp_category": "A03_Injection"
+    },
+    {
+      "id": "AUTH-7",
+      "severity": "medium",
+      "type": "AUTH",
+      "file": "core/authHandler.js",
+      "line": 1,
+      "description": "MD5 is imported but used for password reset tokens. MD5 is cryptographically broken and unsuitable for further use.",
+      "remediation": "Remove md5 dependency. Use crypto.randomBytes() for tokens and bcrypt for password hashing only",
+      "owasp_category": "A07_Auth_Failures"
+    },
+    {
+      "id": "AUTH-8",
+      "severity": "medium",
+      "type": "AUTH",
+      "file": "routes/app.js",
+      "line": 28,
+      "description": "Admin endpoint (/admin/usersapi) returns all user data including password hashes via JSON API without additional authorization checks beyond isAuthenticated.",
+      "remediation": "Add role-based access control: verify req.user.role === 'admin' and exclude sensitive fields (password) from response",
+      "owasp_category": "A07_Auth_Failures"
+    },
+    {
+      "id": "AUTH-9",
+      "severity": "medium",
+      "type": "AUTH",
+      "file": "core/authHandler.js",
+      "line": 75,
+      "description": "Password reset form renders with query parameters (login, token) in template. Tokens visible in browser history and referrer headers.",
+      "remediation": "Use POST-only token delivery, store tokens in secure session, never pass in URL query strings",
+      "owasp_category": "A07_Auth_Failures"
+    },
+    {
+      "id": "IDOR-4",
+      "severity": "medium",
+      "type": "Broken Access Control",
+      "file": "core/authHandler.js",
+      "line": 35,
+      "description": "resetPw function uses weak token validation: token == md5(login). MD5 is cryptographically broken and the token is predictable from username alone.",
+      "remediation": "Use cryptographically secure random tokens stored server-side with expiration timestamps instead of MD5-based tokens.",
+      "owasp_category": "A05_Security_Misconfiguration"
+    },
+    {
+      "id": "MISCONFIG-12",
+      "severity": "medium",
+      "type": "MISCONFIG",
+      "file": "models/index.js",
+      "line": 18,
+      "description": "Database connection errors logged to console, potentially exposing sensitive information in logs.",
+      "remediation": "Log errors securely without exposing connection details. Use proper logging framework (winston already imported).",
+      "owasp_category": "A05_Security_Misconfiguration"
+    },
+    {
+      "id": "MISCONFIG-13",
+      "severity": "medium",
+      "type": "MISCONFIG",
+      "file": "routes/main.js",
+      "line": 18,
+      "description": "Error handling renders 404 but logs error to console, potentially exposing stack traces.",
+      "remediation": "Log errors securely without exposing details to users. Return generic error page.",
+      "owasp_category": "A05_Security_Misconfiguration"
+    },
+    {
+      "id": "MISCONFIG-14",
+      "severity": "medium",
+      "type": "MISCONFIG",
+      "file": "package.json",
+      "line": 20,
+      "description": "Vulnerable dependency: md5 v2.2.1 is outdated. bcrypt v1.0.3 is outdated (current: v5+). node-serialize v0.0.4 has known RCE vulnerabilities.",
+      "remediation": "Update to: bcrypt ^5.0.0, remove node-serialize, use JSON for serialization. Run npm audit fix.",
+      "owasp_category": "A05_Security_Misconfiguration"
+    },
+    {
+      "id": "MISCONFIG-15",
+      "severity": "medium",
+      "type": "MISCONFIG",
+      "file": "core/appHandler.js",
+      "line": 100,
+      "description": "CSRF protection missing: No CSRF token validation on state-changing POST requests despite csurf being installed.",
+      "remediation": "Implement csurf middleware: app.use(csrf()), add token to forms, validate on POST.",
+      "owasp_category": "A05_Security_Misconfiguration"
+    },
+    {
+      "id": "LOGGING-6",
+      "severity": "medium",
+      "type": "LOGGING",
+      "file": "core/appHandler.js",
+      "line": 105,
+      "description": "Unvalidated redirect function has no logging. No audit trail for redirect attempts which could indicate open redirect attacks.",
+      "remediation": "Log all redirect attempts including the target URL and whether it was allowed or blocked.",
+      "owasp_category": "A09_Logging_Failures"
+    },
+    {
+      "id": "LOGGING-7",
+      "severity": "medium",
+      "type": "LOGGING",
+      "file": "models/index.js",
+      "line": 18,
+      "description": "Database connection errors are logged to console only. No structured logging for database failures or connection issues.",
+      "remediation": "Use a proper logging library (winston is already in package.json) instead of console.log for database connection events.",
+      "owasp_category": "A09_Logging_Failures"
+    },
+    {
+      "id": "LOGGING-8",
+      "severity": "medium",
+      "type": "LOGGING",
+      "file": "routes/main.js",
+      "line": 20,
+      "description": "Vulnerability page rendering errors are logged to console only. No structured audit trail for error conditions.",
+      "remediation": "Replace console.log with structured logging using winston. Log all errors with context including user ID and timestamp.",
+      "owasp_category": "A09_Logging_Failures"
+    },
+    {
+      "id": "LOGGING-10",
+      "severity": "medium",
+      "type": "LOGGING",
+      "file": "server.js",
+      "line": 1,
+      "description": "No application startup logging. No record of when the application starts, stops, or encounters initialization errors.",
+      "remediation": "Add logging at application startup to record initialization, configuration, and any startup errors. Log graceful shutdown events.",
+      "owasp_category": "A09_Logging_Failures"
+    },
+    {
+      "id": "PII_LOGGING-3",
+      "severity": "medium",
+      "type": "PII_LEAK",
+      "file": "core/appHandler.js",
+      "line": 8,
+      "description": "SQL injection vulnerability in userSearch function. User input (req.body.login) is directly concatenated into SQL query, allowing attackers to extract sensitive user data including passwords.",
+      "remediation": "Use parameterized queries: db.sequelize.query('SELECT name,id FROM Users WHERE login=?', {replacements: [req.body.login], model: db.User})",
+      "owasp_category": "A09_Logging_Failures"
+    },
+    {
+      "id": "PII_LOGGING-8",
+      "severity": "medium",
+      "type": "PII_LEAK",
+      "file": "core/appHandler.js",
+      "line": 113,
+      "description": "User edit endpoint renders user email and name in response without proper escaping, potential for stored XSS if user data contains malicious scripts.",
+      "remediation": "Ensure all user-controlled data is HTML-escaped in templates. Use EJS auto-escaping or sanitize output.",
+      "owasp_category": "A09_Logging_Failures"
+    },
+    {
+      "id": "PII_LOGGING-9",
+      "severity": "medium",
+      "type": "PII_LEAK",
+      "file": "routes/app.js",
+      "line": 31,
+      "description": "Unvalidated redirect vulnerability. redirect endpoint accepts arbitrary URLs from query parameter without validation.",
+      "remediation": "Validate redirect URLs against whitelist of allowed domains. Use: if (!url.startsWith('/') && !url.startsWith(process.env.ALLOWED_DOMAIN)) { res.status(400).send('Invalid redirect'); }",
+      "owasp_category": "A09_Logging_Failures"
+    },
+    {
+      "id": "EXCEPTION-17",
+      "severity": "medium",
+      "type": "EXCEPTION",
+      "file": "core/passport.js",
+      "line": 30,
+      "description": "Missing error handling in deserializeUser promise. Unhandled promise rejection if database query fails.",
+      "remediation": "Add .catch() handler to handle database errors gracefully",
+      "owasp_category": "A05_Security_Misconfiguration"
+    },
+    {
+      "id": "EXCEPTION-18",
+      "severity": "medium",
+      "type": "EXCEPTION",
+      "file": "core/passport.js",
+      "line": 47,
+      "description": "Missing error handling in login strategy promise. Unhandled promise rejection if database query fails.",
+      "remediation": "Add .catch() handler to handle database errors gracefully",
+      "owasp_category": "A05_Security_Misconfiguration"
+    },
+    {
+      "id": "EXCEPTION-19",
+      "severity": "medium",
+      "type": "EXCEPTION",
+      "file": "core/passport.js",
+      "line": 65,
+      "description": "Missing error handling in signup strategy promise chain. Unhandled promise rejections if database queries fail.",
+      "remediation": "Add .catch() handlers to handle database errors gracefully",
+      "owasp_category": "A05_Security_Misconfiguration"
+    },
+    {
+      "id": "EXCEPTION-20",
+      "severity": "medium",
+      "type": "EXCEPTION",
+      "file": "models/index.js",
+      "line": 18,
+      "description": "Database connection error logged to console but not handled. Stack trace may be exposed.",
+      "remediation": "Use proper logging library and avoid exposing stack traces. Implement graceful degradation.",
+      "owasp_category": "A05_Security_Misconfiguration"
+    },
+    {
+      "id": "EXCEPTION-21",
+      "severity": "medium",
+      "type": "EXCEPTION",
+      "file": "models/index.js",
+      "line": 26,
+      "description": "Database sync error logged to console but not handled. Stack trace may be exposed.",
+      "remediation": "Use proper logging library and avoid exposing stack traces. Implement graceful degradation.",
+      "owasp_category": "A05_Security_Misconfiguration"
+    },
+    {
+      "id": "EXCEPTION-22",
+      "severity": "medium",
+      "type": "EXCEPTION",
+      "file": "server.js",
+      "line": 18,
+      "description": "Session secret hardcoded as 'keyboard cat'. Should use environment variable.",
+      "remediation": "Use process.env.SESSION_SECRET with a strong random value from environment configuration",
+      "owasp_category": "A05_Security_Misconfiguration"
+    },
+    {
+      "id": "SECRETS-1",
+      "severity": "critical",
+      "type": "hardcoded_secret",
+      "file": "core/authHandler.js",
+      "line": 54,
+      "description": "Weak password reset token generation using MD5 hash of login. MD5 is cryptographically broken and predictable. Token can be easily forged.",
+      "remediation": "Use a cryptographically secure random token generator (e.g., crypto.randomBytes) and store hashed tokens server-side with expiration times",
+      "owasp_category": "A02_Cryptographic_Failures"
+    },
+    {
+      "id": "SECRETS-2",
+      "severity": "critical",
+      "type": "hardcoded_secret",
+      "file": "core/authHandler.js",
+      "line": 80,
+      "description": "Same weak MD5-based password reset token validation on line 80. Allows token forgery attacks.",
+      "remediation": "Implement secure token generation and validation with crypto.randomBytes and server-side token storage",
+      "owasp_category": "A02_Cryptographic_Failures"
+    },
+    {
+      "id": "SQLI-0",
+      "severity": "critical",
+      "type": "SQL_INJECTION",
+      "file": "core/appHandler.js",
+      "line": 8,
+      "description": "SQL injection vulnerability via string concatenation in userSearch function. User input from req.body.login is directly concatenated into SQL query without parameterization.",
+      "remediation": "Use parameterized queries with Sequelize: db.User.findOne({ where: { login: req.body.login } }) instead of raw SQL concatenation.",
+      "owasp_category": "A03_Injection"
+    },
+    {
+      "id": "AUTH-0",
+      "severity": "critical",
+      "type": "AUTH",
+      "file": "server.js",
+      "line": 24,
+      "description": "Session secret is hardcoded as 'keyboard cat' - a weak, publicly known string. This compromises session security and allows attackers to forge session tokens.",
+      "remediation": "Use a strong, randomly generated secret from environment variables: secret: process.env.SESSION_SECRET || require('crypto').randomBytes(32).toString('hex')",
+      "owasp_category": "A07_Auth_Failures"
+    },
+    {
+      "id": "AUTH-1",
+      "severity": "critical",
+      "type": "AUTH",
+      "file": "server.js",
+      "line": 27,
+      "description": "Session cookie has secure: false, allowing transmission over HTTP. This enables session hijacking via man-in-the-middle attacks.",
+      "remediation": "Set secure: true (requires HTTPS) and add httpOnly: true, sameSite: 'strict' to prevent XSS-based session theft",
+      "owasp_category": "A07_Auth_Failures"
+    },
+    {
+      "id": "AUTH-2",
+      "severity": "critical",
+      "type": "AUTH",
+      "file": "core/authHandler.js",
+      "line": 48,
+      "description": "Password reset token is generated using MD5(login) - a weak, deterministic hash. Attackers can precompute tokens for any username.",
+      "remediation": "Use cryptographically secure random tokens: require('crypto').randomBytes(32).toString('hex') and store hashed tokens in database with expiration",
+      "owasp_category": "A07_Auth_Failures"
+    },
+    {
+      "id": "AUTH-3",
+      "severity": "critical",
+      "type": "AUTH",
+      "file": "core/authHandler.js",
+      "line": 67,
+      "description": "Password reset token validation uses simple string comparison (==) against MD5(login). No rate limiting, expiration, or one-time use enforcement.",
+      "remediation": "Implement token expiration (15-30 min), one-time use flag, rate limiting on reset attempts, and use constant-time comparison",
+      "owasp_category": "A07_Auth_Failures"
+    },
+    {
+      "id": "INJECTION-0",
+      "severity": "critical",
+      "type": "INJECTION",
+      "file": "core/appHandler.js",
+      "line": 18,
+      "description": "SQL Injection in userSearch: User input from req.body.login is directly concatenated into SQL query without parameterization",
+      "remediation": "Use parameterized queries: db.User.findAll({where: {login: req.body.login}})",
+      "owasp_category": "A03_Injection"
+    },
+    {
+      "id": "INJECTION-1",
+      "severity": "critical",
+      "type": "INJECTION",
+      "file": "core/appHandler.js",
+      "line": 32,
+      "description": "Command Injection in ping: User input from req.body.address is passed directly to exec() without sanitization",
+      "remediation": "Use child_process.execFile() with arguments array instead of exec(), or validate/sanitize input strictly",
+      "owasp_category": "A03_Injection"
+    },
+    {
+      "id": "INJECTION-2",
+      "severity": "critical",
+      "type": "INJECTION",
+      "file": "core/appHandler.js",
+      "line": 103,
+      "description": "Expression Injection in calc: User input from req.body.eqn is passed directly to mathjs.eval() which can execute arbitrary code",
+      "remediation": "Use mathjs.compile() with restricted scope or validate input against whitelist of allowed characters",
+      "owasp_category": "A03_Injection"
+    },
+    {
+      "id": "INJECTION-3",
+      "severity": "critical",
+      "type": "INJECTION",
+      "file": "core/appHandler.js",
+      "line": 118,
+      "description": "Unsafe Deserialization in bulkProductsLegacy: User-supplied file data is deserialized using node-serialize.unserialize() which can execute arbitrary code",
+      "remediation": "Replace node-serialize with safe alternatives like JSON.parse(), or use a safe deserialization library",
+      "owasp_category": "A03_Injection"
+    },
+    {
+      "id": "MISCONFIG-0",
+      "severity": "critical",
+      "type": "MISCONFIG",
+      "file": "core/authHandler.js",
+      "line": 47,
+      "description": "Weak password reset token generation using MD5 hash of login. MD5 is cryptographically broken and tokens are predictable (token == md5(login)).",
+      "remediation": "Use cryptographically secure random token generation (e.g., crypto.randomBytes). Store hashed tokens in database with expiration times.",
+      "owasp_category": "A05_Security_Misconfiguration"
+    },
+    {
+      "id": "MISCONFIG-1",
+      "severity": "critical",
+      "type": "MISCONFIG",
+      "file": "core/appHandler.js",
+      "line": 8,
+      "description": "SQL Injection vulnerability: User input directly concatenated into SQL query without parameterization.",
+      "remediation": "Use parameterized queries or ORM methods: db.User.findAll({where: {login: req.body.login}})",
+      "owasp_category": "A05_Security_Misconfiguration"
+    },
+    {
+      "id": "MISCONFIG-2",
+      "severity": "critical",
+      "type": "MISCONFIG",
+      "file": "core/appHandler.js",
+      "line": 18,
+      "description": "Command Injection vulnerability: User input directly passed to exec() without sanitization.",
+      "remediation": "Use child_process.execFile() with arguments array, or validate/whitelist input strictly.",
+      "owasp_category": "A05_Security_Misconfiguration"
+    },
+    {
+      "id": "MISCONFIG-3",
+      "severity": "critical",
+      "type": "MISCONFIG",
+      "file": "core/appHandler.js",
+      "line": 155,
+      "description": "Insecure Deserialization: node-serialize.unserialize() on untrusted file upload data allows arbitrary code execution.",
+      "remediation": "Use JSON.parse() instead. Never unserialize untrusted data. Validate file format strictly.",
+      "owasp_category": "A05_Security_Misconfiguration"
+    },
+    {
+      "id": "MISCONFIG-4",
+      "severity": "critical",
+      "type": "MISCONFIG",
+      "file": "core/appHandler.js",
+      "line": 170,
+      "description": "XXE (XML External Entity) vulnerability: libxmljs.parseXmlString() with {noent:true} enables entity expansion attacks.",
+      "remediation": "Remove {noent:true} option. Use {noent:false, noblanks:true} and validate XML schema.",
+      "owasp_category": "A05_Security_Misconfiguration"
+    },
+    {
+      "id": "MISCONFIG-5",
+      "severity": "critical",
+      "type": "MISCONFIG",
+      "file": "core/appHandler.js",
+      "line": 183,
+      "description": "Open Redirect vulnerability: User-controlled URL passed directly to res.redirect() without validation.",
+      "remediation": "Validate redirect URL against whitelist or ensure it's relative (starts with /).",
+      "owasp_category": "A05_Security_Misconfiguration"
+    },
+    {
+      "id": "MISCONFIG-6",
+      "severity": "critical",
+      "type": "MISCONFIG",
+      "file": "server.js",
+      "line": 24,
+      "description": "Hardcoded session secret 'keyboard cat' is weak and publicly known. Session cookies not secure in production.",
+      "remediation": "Use strong random secret from environment variable. Set secure:true, httpOnly:true, sameSite:'strict' in production.",
+      "owasp_category": "A05_Security_Misconfiguration"
+    },
+    {
+      "id": "CRYPTO-0",
+      "severity": "critical",
+      "type": "CRYPTO",
+      "file": "core/authHandler.js",
+      "line": 47,
+      "description": "MD5 used for password reset token generation. MD5 is cryptographically broken and should not be used for security purposes.",
+      "remediation": "Replace MD5 with a cryptographically secure random token generator. Use crypto.randomBytes() or a library like uuid v4.",
+      "owasp_category": "A02_Cryptographic_Failures"
+    },
+    {
+      "id": "CRYPTO-1",
+      "severity": "critical",
+      "type": "CRYPTO",
+      "file": "core/authHandler.js",
+      "line": 68,
+      "description": "MD5 used for password reset token validation. MD5 is cryptographically broken and unsuitable for further use.",
+      "remediation": "Use secure token comparison with crypto.randomBytes() generated tokens stored server-side, or use HMAC-based tokens.",
+      "owasp_category": "A02_Cryptographic_Failures"
+    },
+    {
+      "id": "LOGGING-0",
+      "severity": "critical",
+      "type": "LOGGING",
+      "file": "core/authHandler.js",
+      "line": 10,
+      "description": "No logging for authentication attempts. Failed login attempts are not logged, making it impossible to detect brute force attacks or unauthorized access attempts.",
+      "remediation": "Add logging for all authentication events: successful logins, failed attempts with username/timestamp, and password reset requests. Use a logging library like winston to record these events.",
+      "owasp_category": "A09_Logging_Failures"
+    },
+    {
+      "id": "PII_LOGGING-5",
+      "severity": "critical",
+      "type": "PII_LEAK",
+      "file": "core/appHandler.js",
+      "line": 135,
+      "description": "Insecure deserialization vulnerability in bulkProductsLegacy. User-supplied file data is unserialized with node-serialize without validation, allowing arbitrary code execution and data theft.",
+      "remediation": "Remove node-serialize usage. Use JSON.parse() with schema validation instead. Validate file contents before processing.",
+      "owasp_category": "A09_Logging_Failures"
+    },
+    {
+      "id": "EXCEPTION-3",
+      "severity": "critical",
+      "type": "EXCEPTION",
+      "file": "core/appHandler.js",
+      "line": 8,
+      "description": "SQL injection vulnerability in userSearch. User input directly concatenated into SQL query without parameterization.",
+      "remediation": "Use parameterized queries or Sequelize's where clause with proper escaping instead of raw SQL concatenation",
+      "owasp_category": "A05_Security_Misconfiguration"
+    },
+    {
+      "id": "EXCEPTION-10",
+      "severity": "critical",
+      "type": "EXCEPTION",
+      "file": "core/appHandler.js",
+      "line": 155,
+      "description": "Unvalidated redirect vulnerability. User-supplied URL from query parameter passed directly to res.redirect() without validation.",
+      "remediation": "Validate redirect URL against whitelist of allowed domains or use relative URLs only",
+      "owasp_category": "A05_Security_Misconfiguration"
+    },
+    {
+      "id": "EXCEPTION-13",
+      "severity": "critical",
+      "type": "EXCEPTION",
+      "file": "core/appHandler.js",
+      "line": 184,
+      "description": "Insecure deserialization vulnerability in bulkProductsLegacy. User-supplied file data passed to node-serialize.unserialize() without validation.",
+      "remediation": "Avoid using unserialize() on untrusted data. Use JSON.parse() instead or implement strict input validation",
+      "owasp_category": "A05_Security_Misconfiguration"
+    }
+  ],
+  "scan_metadata": {
+    "total_findings": 98,
+    "critical": 25,
+    "high": 48,
+    "medium": 25,
+    "low": 0,
+    "agents_invoked": [
+      "SECRETS",
+      "SQLI",
+      "XSS",
+      "AUTH",
+      "INJECTION",
+      "IDOR",
+      "MISCONFIG",
+      "CRYPTO",
+      "LOGGING",
+      "PII_LOGGING",
+      "EXCEPTION"
+    ],
+    "scan_duration_ms": 282698
+  }
+}

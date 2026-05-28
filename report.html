@@ -1,0 +1,2124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SecuraScan Security Report</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      color: #1f2937;
+      background: #f3f4f6;
+      padding: 2rem;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+    
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 100%);
+      color: white;
+      padding: 2rem;
+      border-radius: 12px;
+      margin-bottom: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .header h1 { font-size: 1.75rem; font-weight: 700; }
+    .header .subtitle { opacity: 0.9; font-size: 0.9rem; margin-top: 0.25rem; }
+    .risk-badge {
+      background: white;
+      padding: 1rem 1.5rem;
+      border-radius: 12px;
+      text-align: center;
+      min-width: 120px;
+    }
+    .risk-score {
+      font-size: 2.5rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+    .risk-label { font-size: 0.85rem; font-weight: 600; margin-top: 0.25rem; }
+    
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .stat-card {
+      background: white;
+      padding: 1.25rem;
+      border-radius: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .stat-card h3 { font-size: 0.8rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat-value { font-size: 1.75rem; font-weight: 700; margin-top: 0.25rem; }
+    
+    /* Severity Pills */
+    .severity-row {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 0.5rem;
+    }
+    .severity-pill {
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: white;
+    }
+    
+    /* Categories */
+    .categories {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      margin-bottom: 1.5rem;
+    }
+    .categories h2 { font-size: 1rem; margin-bottom: 1rem; color: #374151; }
+    .category-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .category-tag {
+      background: #e0e7ff;
+      color: #3730a3;
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+    
+    /* Findings */
+    .findings-section { margin-bottom: 2rem; }
+    .findings-section h2 {
+      font-size: 1.25rem;
+      margin-bottom: 1rem;
+      color: #111827;
+    }
+    .finding-card {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+    .finding-header {
+      padding: 1rem 1.25rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+      border-left: 4px solid;
+    }
+    .finding-title { font-weight: 600; font-size: 1rem; }
+    .finding-meta {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .meta-tag {
+      background: #f3f4f6;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      color: #4b5563;
+    }
+    .finding-severity {
+      padding: 0.3rem 0.8rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .finding-body { padding: 1rem 1.25rem; border-top: 1px solid #e5e7eb; }
+    .finding-body p { margin-bottom: 0.75rem; color: #4b5563; font-size: 0.9rem; }
+    .finding-body strong { color: #111827; }
+    .code-block {
+      background: #1f2937;
+      color: #e5e7eb;
+      padding: 1rem;
+      border-radius: 6px;
+      font-family: 'Fira Code', 'Consolas', monospace;
+      font-size: 0.8rem;
+      overflow-x: auto;
+      margin: 0.75rem 0;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .recommendation {
+      background: #ecfdf5;
+      border-left: 3px solid #10b981;
+      padding: 0.75rem 1rem;
+      margin-top: 0.75rem;
+      border-radius: 0 6px 6px 0;
+      font-size: 0.85rem;
+      color: #065f46;
+    }
+    
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 1.5rem;
+      color: #6b7280;
+      font-size: 0.85rem;
+    }
+    
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 3rem;
+      background: white;
+      border-radius: 10px;
+      color: #6b7280;
+    }
+    .empty-state .icon { font-size: 3rem; margin-bottom: 1rem; }
+    
+    @media (max-width: 640px) {
+      body { padding: 1rem; }
+      .header { flex-direction: column; text-align: center; }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <div>
+        <h1>🛡️ SecuraScan Report</h1>
+        <div class="subtitle">Generated: 5/2/2026, 3:07:45 PM</div>
+        
+      </div>
+      <div class="risk-badge">
+        <div class="risk-score" style="color: #16a34a">0</div>
+        <div class="risk-label" style="color: #16a34a">Minimal Risk</div>
+      </div>
+    </div>
+    
+    <!-- Stats Grid -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <h3>Total Findings</h3>
+        <div class="stat-value">98</div>
+      </div>
+      <div class="stat-card">
+        <h3>Files Scanned</h3>
+        <div class="stat-value">N/A</div>
+      </div>
+      <div class="stat-card">
+        <h3>Agents Run</h3>
+        <div class="stat-value">N/A</div>
+      </div>
+      <div class="stat-card">
+        <h3>Severity Breakdown</h3>
+        <div class="severity-row">
+          <span class="severity-pill" style="background:#dc2626">25 Crit</span>
+          <span class="severity-pill" style="background:#ea580c">48 High</span>
+          <span class="severity-pill" style="background:#ca8a04">25 Med</span>
+          
+          
+          
+        </div>
+      </div>
+    </div>
+    
+    <!-- Categories -->
+    
+    <div class="categories">
+      <h2>📊 Vulnerability Categories</h2>
+      <div class="category-grid">
+        <span class="category-tag">Other (98)</span>
+      </div>
+    </div>
+    
+    
+    <!-- Findings -->
+    <div class="findings-section">
+      <h2>🔍 Findings (98)</h2>
+      
+      
+      
+      
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #1</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 server.js:20</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>Hardcoded session secret &#039;keyboard cat&#039; exposed in code. Session secrets should be stored in environment variables.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #2</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:10</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>SQL injection vulnerability in userSearch function. User input from req.body.login is directly concatenated into SQL query without parameterization, which could allow SQL injection attacks.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #3</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:30</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>Command injection vulnerability in ping function. User input from req.body.address is directly passed to exec() without sanitization, allowing arbitrary command execution.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #4</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:145</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>Unsafe deserialization vulnerability in bulkProductsLegacy function. User-supplied file data is deserialized using node-serialize.unserialize() without validation, which can lead to arbitrary code execution.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #5</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:160</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>XXE (XML External Entity) vulnerability in bulkProducts function. XML parsing with libxmljs is configured with {noent:true} which enables entity expansion, allowing XXE attacks.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #6</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/authHandler.js:38</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>No rate limiting on login attempts. Enables brute force attacks on user credentials.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #7</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 routes/main.js:38</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>Logout endpoint (GET /logout) uses GET request. Vulnerable to CSRF attacks - attackers can force logout via malicious links.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #8</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/authHandler.js:30</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>No session destruction on logout. Session data persists server-side, allowing potential session reuse.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #9</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:130</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>XXE (XML External Entity) Injection in bulkProducts: XML parsing with {noent:true} enables entity expansion attacks</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #10</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:89</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>Open Redirect in redirect function: User input from req.query.url is passed directly to res.redirect() without validation</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #11</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:70</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>userEditSubmit function fetches user by ID from request body without verifying ownership. An attacker can modify any user&#039;s email/password by changing req.body.id to target another user&#039;s ID.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #12</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:50</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>modifyProduct function fetches product by ID from query parameter without any authorization check. Any authenticated user can view/modify any product by changing the ID.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #13</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:110</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>redirect function accepts user-supplied URL in req.query.url and redirects without validation. Attacker can redirect to arbitrary URLs including internal services.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #14</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:125</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>listUsersAPI endpoint returns all users without role verification. Should restrict to admin users only.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #15</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:139</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>Sensitive data exposure: listUsersAPI returns all user records including password hashes without authorization check.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #16</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 server.js:24</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>Session cookie has secure:false, allowing transmission over HTTP and exposure to MITM attacks.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #17</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 server.js:1</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>Missing security headers: No X-Frame-Options, X-Content-Type-Options, Content-Security-Policy, or HSTS headers.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #18</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/authHandler.js:30</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>User enumeration vulnerability: Different error messages for &#039;user not found&#039; vs &#039;invalid password&#039; leak user existence.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #19</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:189</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>Expression injection in mathjs.eval(): User input directly evaluated as math expression allows code execution.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #20</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 server.js:21</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>Session secret is hardcoded as &#039;keyboard cat&#039;. Hardcoded secrets are insecure and should be loaded from environment variables.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #21</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/authHandler.js:30</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>Password reset requests are not logged. No audit trail for password reset operations, which are sensitive security events.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #22</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:5</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>SQL injection vulnerability in userSearch function is not logged. No audit trail for suspicious database queries or injection attempts.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #23</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:18</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>Command injection vulnerability in ping function has no logging. No audit trail for command execution or injection attempts.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #24</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:115</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>Admin API endpoint (listUsersAPI) returns all user data without logging access. No audit trail for sensitive data access.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #25</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:75</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>User profile modifications (userEditSubmit) are not logged. No audit trail for changes to user accounts, passwords, or email addresses.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #26</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:125</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>File upload operations (bulkProducts, bulkProductsLegacy) are not logged. No audit trail for bulk data imports or file processing.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #27</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/passport.js:25</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>Login failures in passport strategy are not logged. No audit trail for failed authentication attempts, making brute force detection impossible.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #28</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/passport.js:45</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>User registration attempts are not logged. No audit trail for new account creation or registration failures.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #29</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/authHandler.js:57</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>Password reset token validation uses weak MD5 hash of login username. Token is passed in query parameters and rendered in HTML, exposing it in browser history and logs.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #30</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/authHandler.js:75</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>Password reset form renders login and token in HTML response, exposing sensitive reset token in response body which may be logged or cached.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #31</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 server.js:24</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>Session secret is hardcoded as &#039;keyboard cat&#039;, a well-known default. This compromises session security and user authentication tokens.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #32</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:130</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>listUsersAPI endpoint returns all user records including password hashes in JSON response without authentication checks beyond isAuthenticated.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #33</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:148</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>XXE (XML External Entity) vulnerability in bulkProducts. libxmljs is configured with {noent:true} which enables entity expansion, allowing attackers to read sensitive files or cause DoS.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #34</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:20</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>Command injection vulnerability in ping function. User input (req.body.address) is directly passed to exec() without sanitization, allowing arbitrary command execution.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #35</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/authHandler.js:28</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>Missing error handling in forgotPw promise chain. Unhandled promise rejection if database query fails.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #36</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/authHandler.js:48</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>Missing error handling in resetPw promise chain. Unhandled promise rejection if database query fails.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #37</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/authHandler.js:72</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>Missing error handling in resetPwSubmit promise chain. Unhandled promise rejection if database query or save fails.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #38</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:20</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>Missing error handling in userSearch catch block. Error details may be exposed to client.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #39</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:28</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>Command injection vulnerability in ping function. User input directly passed to exec() without sanitization.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #40</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:35</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>Missing error handling in listProducts promise. Unhandled promise rejection if database query fails.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #41</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:45</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>Missing error handling in productSearch promise. Unhandled promise rejection if database query fails.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #42</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:57</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>Missing error handling in modifyProduct promise. Unhandled promise rejection if database query fails.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #43</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:130</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>Missing error handling in userEditSubmit promise. Unhandled promise rejection if database query or save fails.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #44</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:165</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>Expression injection vulnerability in calc function. User input passed directly to mathjs.eval() without sanitization.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #45</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:176</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>Missing error handling in listUsersAPI promise. Unhandled promise rejection if database query fails. Sensitive user data exposed in API response.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #46</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:184</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>Missing error handling in bulkProductsLegacy. Unhandled promise rejection if database save fails.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #47</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:200</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>XXE (XML External Entity) vulnerability in bulkProducts. XML parsing with noent:true enables entity expansion attacks.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ea580c; background: #fff7ed">
+            <div>
+              <div class="finding-title">Finding #48</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:200</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ea580c; color: white">high</span>
+          </div>
+          <div class="finding-body">
+            <p>Missing error handling in bulkProducts. Unhandled promise rejection if database save fails.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ca8a04; background: #fefce8">
+            <div>
+              <div class="finding-title">Finding #49</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:135</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ca8a04; color: white">medium</span>
+          </div>
+          <div class="finding-body">
+            <p>Open redirect vulnerability in redirect function. User input from req.query.url is directly used in res.redirect() without validation, allowing attackers to redirect users to arbitrary URLs.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ca8a04; background: #fefce8">
+            <div>
+              <div class="finding-title">Finding #50</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/authHandler.js:48</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ca8a04; color: white">medium</span>
+          </div>
+          <div class="finding-body">
+            <p>Potential XSS vulnerability in resetPw function. User input from req.query.login and req.query.token are passed directly to res.render() without escaping, which could be reflected in the template.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ca8a04; background: #fefce8">
+            <div>
+              <div class="finding-title">Finding #51</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/authHandler.js:75</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ca8a04; color: white">medium</span>
+          </div>
+          <div class="finding-body">
+            <p>Potential XSS vulnerability in resetPwSubmit function. User input from req.query.login and req.query.token are passed to res.render() without validation.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ca8a04; background: #fefce8">
+            <div>
+              <div class="finding-title">Finding #52</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 routes/main.js:18</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ca8a04; color: white">medium</span>
+          </div>
+          <div class="finding-body">
+            <p>Potential path traversal/template injection vulnerability. User input from req.params.vuln is used to construct template paths without validation, allowing access to arbitrary template files.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ca8a04; background: #fefce8">
+            <div>
+              <div class="finding-title">Finding #53</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/authHandler.js:1</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ca8a04; color: white">medium</span>
+          </div>
+          <div class="finding-body">
+            <p>MD5 is imported but used for password reset tokens. MD5 is cryptographically broken and unsuitable for further use.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ca8a04; background: #fefce8">
+            <div>
+              <div class="finding-title">Finding #54</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 routes/app.js:28</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ca8a04; color: white">medium</span>
+          </div>
+          <div class="finding-body">
+            <p>Admin endpoint (/admin/usersapi) returns all user data including password hashes via JSON API without additional authorization checks beyond isAuthenticated.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ca8a04; background: #fefce8">
+            <div>
+              <div class="finding-title">Finding #55</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/authHandler.js:75</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ca8a04; color: white">medium</span>
+          </div>
+          <div class="finding-body">
+            <p>Password reset form renders with query parameters (login, token) in template. Tokens visible in browser history and referrer headers.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ca8a04; background: #fefce8">
+            <div>
+              <div class="finding-title">Finding #56</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/authHandler.js:35</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ca8a04; color: white">medium</span>
+          </div>
+          <div class="finding-body">
+            <p>resetPw function uses weak token validation: token == md5(login). MD5 is cryptographically broken and the token is predictable from username alone.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ca8a04; background: #fefce8">
+            <div>
+              <div class="finding-title">Finding #57</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 models/index.js:18</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ca8a04; color: white">medium</span>
+          </div>
+          <div class="finding-body">
+            <p>Database connection errors logged to console, potentially exposing sensitive information in logs.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ca8a04; background: #fefce8">
+            <div>
+              <div class="finding-title">Finding #58</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 routes/main.js:18</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ca8a04; color: white">medium</span>
+          </div>
+          <div class="finding-body">
+            <p>Error handling renders 404 but logs error to console, potentially exposing stack traces.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ca8a04; background: #fefce8">
+            <div>
+              <div class="finding-title">Finding #59</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 package.json:20</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ca8a04; color: white">medium</span>
+          </div>
+          <div class="finding-body">
+            <p>Vulnerable dependency: md5 v2.2.1 is outdated. bcrypt v1.0.3 is outdated (current: v5+). node-serialize v0.0.4 has known RCE vulnerabilities.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ca8a04; background: #fefce8">
+            <div>
+              <div class="finding-title">Finding #60</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:100</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ca8a04; color: white">medium</span>
+          </div>
+          <div class="finding-body">
+            <p>CSRF protection missing: No CSRF token validation on state-changing POST requests despite csurf being installed.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ca8a04; background: #fefce8">
+            <div>
+              <div class="finding-title">Finding #61</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:105</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ca8a04; color: white">medium</span>
+          </div>
+          <div class="finding-body">
+            <p>Unvalidated redirect function has no logging. No audit trail for redirect attempts which could indicate open redirect attacks.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ca8a04; background: #fefce8">
+            <div>
+              <div class="finding-title">Finding #62</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 models/index.js:18</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ca8a04; color: white">medium</span>
+          </div>
+          <div class="finding-body">
+            <p>Database connection errors are logged to console only. No structured logging for database failures or connection issues.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ca8a04; background: #fefce8">
+            <div>
+              <div class="finding-title">Finding #63</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 routes/main.js:20</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ca8a04; color: white">medium</span>
+          </div>
+          <div class="finding-body">
+            <p>Vulnerability page rendering errors are logged to console only. No structured audit trail for error conditions.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ca8a04; background: #fefce8">
+            <div>
+              <div class="finding-title">Finding #64</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 server.js:1</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ca8a04; color: white">medium</span>
+          </div>
+          <div class="finding-body">
+            <p>No application startup logging. No record of when the application starts, stops, or encounters initialization errors.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ca8a04; background: #fefce8">
+            <div>
+              <div class="finding-title">Finding #65</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:8</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ca8a04; color: white">medium</span>
+          </div>
+          <div class="finding-body">
+            <p>SQL injection vulnerability in userSearch function. User input (req.body.login) is directly concatenated into SQL query, allowing attackers to extract sensitive user data including passwords.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ca8a04; background: #fefce8">
+            <div>
+              <div class="finding-title">Finding #66</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:113</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ca8a04; color: white">medium</span>
+          </div>
+          <div class="finding-body">
+            <p>User edit endpoint renders user email and name in response without proper escaping, potential for stored XSS if user data contains malicious scripts.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ca8a04; background: #fefce8">
+            <div>
+              <div class="finding-title">Finding #67</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 routes/app.js:31</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ca8a04; color: white">medium</span>
+          </div>
+          <div class="finding-body">
+            <p>Unvalidated redirect vulnerability. redirect endpoint accepts arbitrary URLs from query parameter without validation.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ca8a04; background: #fefce8">
+            <div>
+              <div class="finding-title">Finding #68</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/passport.js:30</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ca8a04; color: white">medium</span>
+          </div>
+          <div class="finding-body">
+            <p>Missing error handling in deserializeUser promise. Unhandled promise rejection if database query fails.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ca8a04; background: #fefce8">
+            <div>
+              <div class="finding-title">Finding #69</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/passport.js:47</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ca8a04; color: white">medium</span>
+          </div>
+          <div class="finding-body">
+            <p>Missing error handling in login strategy promise. Unhandled promise rejection if database query fails.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ca8a04; background: #fefce8">
+            <div>
+              <div class="finding-title">Finding #70</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/passport.js:65</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ca8a04; color: white">medium</span>
+          </div>
+          <div class="finding-body">
+            <p>Missing error handling in signup strategy promise chain. Unhandled promise rejections if database queries fail.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ca8a04; background: #fefce8">
+            <div>
+              <div class="finding-title">Finding #71</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 models/index.js:18</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ca8a04; color: white">medium</span>
+          </div>
+          <div class="finding-body">
+            <p>Database connection error logged to console but not handled. Stack trace may be exposed.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ca8a04; background: #fefce8">
+            <div>
+              <div class="finding-title">Finding #72</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 models/index.js:26</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ca8a04; color: white">medium</span>
+          </div>
+          <div class="finding-body">
+            <p>Database sync error logged to console but not handled. Stack trace may be exposed.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #ca8a04; background: #fefce8">
+            <div>
+              <div class="finding-title">Finding #73</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 server.js:18</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #ca8a04; color: white">medium</span>
+          </div>
+          <div class="finding-body">
+            <p>Session secret hardcoded as &#039;keyboard cat&#039;. Should use environment variable.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #dc2626; background: #fef2f2">
+            <div>
+              <div class="finding-title">Finding #74</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/authHandler.js:54</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #dc2626; color: white">critical</span>
+          </div>
+          <div class="finding-body">
+            <p>Weak password reset token generation using MD5 hash of login. MD5 is cryptographically broken and predictable. Token can be easily forged.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #dc2626; background: #fef2f2">
+            <div>
+              <div class="finding-title">Finding #75</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/authHandler.js:80</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #dc2626; color: white">critical</span>
+          </div>
+          <div class="finding-body">
+            <p>Same weak MD5-based password reset token validation on line 80. Allows token forgery attacks.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #dc2626; background: #fef2f2">
+            <div>
+              <div class="finding-title">Finding #76</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:8</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #dc2626; color: white">critical</span>
+          </div>
+          <div class="finding-body">
+            <p>SQL injection vulnerability via string concatenation in userSearch function. User input from req.body.login is directly concatenated into SQL query without parameterization.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #dc2626; background: #fef2f2">
+            <div>
+              <div class="finding-title">Finding #77</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 server.js:24</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #dc2626; color: white">critical</span>
+          </div>
+          <div class="finding-body">
+            <p>Session secret is hardcoded as &#039;keyboard cat&#039; - a weak, publicly known string. This compromises session security and allows attackers to forge session tokens.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #dc2626; background: #fef2f2">
+            <div>
+              <div class="finding-title">Finding #78</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 server.js:27</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #dc2626; color: white">critical</span>
+          </div>
+          <div class="finding-body">
+            <p>Session cookie has secure: false, allowing transmission over HTTP. This enables session hijacking via man-in-the-middle attacks.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #dc2626; background: #fef2f2">
+            <div>
+              <div class="finding-title">Finding #79</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/authHandler.js:48</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #dc2626; color: white">critical</span>
+          </div>
+          <div class="finding-body">
+            <p>Password reset token is generated using MD5(login) - a weak, deterministic hash. Attackers can precompute tokens for any username.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #dc2626; background: #fef2f2">
+            <div>
+              <div class="finding-title">Finding #80</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/authHandler.js:67</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #dc2626; color: white">critical</span>
+          </div>
+          <div class="finding-body">
+            <p>Password reset token validation uses simple string comparison (==) against MD5(login). No rate limiting, expiration, or one-time use enforcement.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #dc2626; background: #fef2f2">
+            <div>
+              <div class="finding-title">Finding #81</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:18</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #dc2626; color: white">critical</span>
+          </div>
+          <div class="finding-body">
+            <p>SQL Injection in userSearch: User input from req.body.login is directly concatenated into SQL query without parameterization</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #dc2626; background: #fef2f2">
+            <div>
+              <div class="finding-title">Finding #82</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:32</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #dc2626; color: white">critical</span>
+          </div>
+          <div class="finding-body">
+            <p>Command Injection in ping: User input from req.body.address is passed directly to exec() without sanitization</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #dc2626; background: #fef2f2">
+            <div>
+              <div class="finding-title">Finding #83</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:103</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #dc2626; color: white">critical</span>
+          </div>
+          <div class="finding-body">
+            <p>Expression Injection in calc: User input from req.body.eqn is passed directly to mathjs.eval() which can execute arbitrary code</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #dc2626; background: #fef2f2">
+            <div>
+              <div class="finding-title">Finding #84</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:118</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #dc2626; color: white">critical</span>
+          </div>
+          <div class="finding-body">
+            <p>Unsafe Deserialization in bulkProductsLegacy: User-supplied file data is deserialized using node-serialize.unserialize() which can execute arbitrary code</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #dc2626; background: #fef2f2">
+            <div>
+              <div class="finding-title">Finding #85</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/authHandler.js:47</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #dc2626; color: white">critical</span>
+          </div>
+          <div class="finding-body">
+            <p>Weak password reset token generation using MD5 hash of login. MD5 is cryptographically broken and tokens are predictable (token == md5(login)).</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #dc2626; background: #fef2f2">
+            <div>
+              <div class="finding-title">Finding #86</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:8</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #dc2626; color: white">critical</span>
+          </div>
+          <div class="finding-body">
+            <p>SQL Injection vulnerability: User input directly concatenated into SQL query without parameterization.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #dc2626; background: #fef2f2">
+            <div>
+              <div class="finding-title">Finding #87</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:18</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #dc2626; color: white">critical</span>
+          </div>
+          <div class="finding-body">
+            <p>Command Injection vulnerability: User input directly passed to exec() without sanitization.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #dc2626; background: #fef2f2">
+            <div>
+              <div class="finding-title">Finding #88</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:155</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #dc2626; color: white">critical</span>
+          </div>
+          <div class="finding-body">
+            <p>Insecure Deserialization: node-serialize.unserialize() on untrusted file upload data allows arbitrary code execution.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #dc2626; background: #fef2f2">
+            <div>
+              <div class="finding-title">Finding #89</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:170</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #dc2626; color: white">critical</span>
+          </div>
+          <div class="finding-body">
+            <p>XXE (XML External Entity) vulnerability: libxmljs.parseXmlString() with {noent:true} enables entity expansion attacks.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #dc2626; background: #fef2f2">
+            <div>
+              <div class="finding-title">Finding #90</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:183</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #dc2626; color: white">critical</span>
+          </div>
+          <div class="finding-body">
+            <p>Open Redirect vulnerability: User-controlled URL passed directly to res.redirect() without validation.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #dc2626; background: #fef2f2">
+            <div>
+              <div class="finding-title">Finding #91</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 server.js:24</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #dc2626; color: white">critical</span>
+          </div>
+          <div class="finding-body">
+            <p>Hardcoded session secret &#039;keyboard cat&#039; is weak and publicly known. Session cookies not secure in production.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #dc2626; background: #fef2f2">
+            <div>
+              <div class="finding-title">Finding #92</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/authHandler.js:47</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #dc2626; color: white">critical</span>
+          </div>
+          <div class="finding-body">
+            <p>MD5 used for password reset token generation. MD5 is cryptographically broken and should not be used for security purposes.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #dc2626; background: #fef2f2">
+            <div>
+              <div class="finding-title">Finding #93</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/authHandler.js:68</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #dc2626; color: white">critical</span>
+          </div>
+          <div class="finding-body">
+            <p>MD5 used for password reset token validation. MD5 is cryptographically broken and unsuitable for further use.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #dc2626; background: #fef2f2">
+            <div>
+              <div class="finding-title">Finding #94</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/authHandler.js:10</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #dc2626; color: white">critical</span>
+          </div>
+          <div class="finding-body">
+            <p>No logging for authentication attempts. Failed login attempts are not logged, making it impossible to detect brute force attacks or unauthorized access attempts.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #dc2626; background: #fef2f2">
+            <div>
+              <div class="finding-title">Finding #95</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:135</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #dc2626; color: white">critical</span>
+          </div>
+          <div class="finding-body">
+            <p>Insecure deserialization vulnerability in bulkProductsLegacy. User-supplied file data is unserialized with node-serialize without validation, allowing arbitrary code execution and data theft.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #dc2626; background: #fef2f2">
+            <div>
+              <div class="finding-title">Finding #96</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:8</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #dc2626; color: white">critical</span>
+          </div>
+          <div class="finding-body">
+            <p>SQL injection vulnerability in userSearch. User input directly concatenated into SQL query without parameterization.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #dc2626; background: #fef2f2">
+            <div>
+              <div class="finding-title">Finding #97</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:155</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #dc2626; color: white">critical</span>
+          </div>
+          <div class="finding-body">
+            <p>Unvalidated redirect vulnerability. User-supplied URL from query parameter passed directly to res.redirect() without validation.</p>
+            
+            
+          </div>
+        </div>
+        
+        <div class="finding-card">
+          <div class="finding-header" style="border-color: #dc2626; background: #fef2f2">
+            <div>
+              <div class="finding-title">Finding #98</div>
+              <div class="finding-meta">
+                
+                <span class="meta-tag">📄 core/appHandler.js:184</span>
+                
+              </div>
+            </div>
+            <span class="finding-severity" style="background: #dc2626; color: white">critical</span>
+          </div>
+          <div class="finding-body">
+            <p>Insecure deserialization vulnerability in bulkProductsLegacy. User-supplied file data passed to node-serialize.unserialize() without validation.</p>
+            
+            
+          </div>
+        </div>
+        
+    </div>
+    
+    <!-- Footer -->
+    <div class="footer">
+      <p>Generated by SecuraScan • AI-Powered Security Scanner</p>
+    </div>
+  </div>
+</body>
+</html>

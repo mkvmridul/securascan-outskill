@@ -1,0 +1,30 @@
+{
+  "name": "securascan",
+  "version": "1.0.0",
+  "description": "AI-powered security scanner CLI for codebases",
+  "main": "cli.js",
+  "type": "module",
+  "bin": {
+    "securascan": "./cli.js"
+  },
+  "scripts": {
+    "start": "node cli.js",
+    "scan": "node cli.js scan",
+    "config": "node cli.js config"
+  },
+  "keywords": [
+    "security",
+    "scanner",
+    "ai",
+    "owasp",
+    "cli"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.92.0",
+    "@google/generative-ai": "^0.21.0",
+    "adm-zip": "^0.5.16",
+    "openai": "^4.77.0",
+    "pdfkit": "^0.18.0"
+  }
+}
