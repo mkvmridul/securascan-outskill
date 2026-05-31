@@ -73,11 +73,14 @@ export async function run(orchestratorResult, agentFindings, _llmConfig) {
   const allFindings = Object.entries(agentFindings).flatMap(([agent, findings]) =>
     (findings || []).map((f, i) => ({
       id: `${agent}-${i}`,
+      agent,
       severity: f.severity || 'medium',
       type: f.type || agent.replace('_AGENT', ''),
+      category: f.category || f.subtype || mapToOwasp(f.type || agent),
       file: f.file || 'unknown',
       line: f.line || '?',
       description: f.description || 'Security issue detected',
+      evidence: f.evidence || f.code || '',
       remediation: f.remediation || 'Review and fix',
       owasp_category: mapToOwasp(f.type || agent)
     }))

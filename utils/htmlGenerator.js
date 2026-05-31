@@ -49,8 +49,17 @@ function getRiskLabel(score) {
 
 export async function generateHTML(report, outputPath) {
   const findings = report.findings || [];
-  const riskScore = report.riskScore || 0;
-  const summary = report.summary || {};
+  const riskScore = report.riskScore ?? report.risk_score ?? 0;
+  const summary = report.summary || report.scan_metadata || {};
+  const agentsRun = summary.agentsRun ?? summary.agents_invoked?.length ?? 'N/A';
+  const sandboxSummary = report.sandbox_summary || {};
+  const replayData = findings.map((finding, index) => ({
+    index,
+    title: finding.title || finding.issue || finding.type || `Finding #${index + 1}`,
+    severity: finding.severity || 'info',
+    verification: finding.sandbox_verification || null
+  })).filter(item => item.verification);
+  const replayJson = JSON.stringify(replayData).replace(/</g, '\\u003c');
   
   // Count by severity
   const severityCounts = { critical: 0, high: 0, medium: 0, low: 0, info: 0 };
@@ -234,6 +243,116 @@ export async function generateHTML(report, outputPath) {
       font-size: 0.85rem;
       color: #065f46;
     }
+    .verification-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      margin-top: 0.75rem;
+    }
+    .verification-badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 0.35rem 0.75rem;
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .verification-badge.confirmed_exploitable { background: #fee2e2; color: #991b1b; }
+    .verification-badge.probably_safe { background: #dcfce7; color: #166534; }
+    .verification-badge.could_not_verify { background: #fef3c7; color: #92400e; }
+    .replay-button, .panel-button {
+      border: 1px solid #111827;
+      background: #111827;
+      color: white;
+      border-radius: 6px;
+      padding: 0.45rem 0.75rem;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .panel-button.secondary {
+      background: white;
+      color: #111827;
+      border-color: #d1d5db;
+    }
+    .replay-button:hover, .panel-button:hover { filter: brightness(0.95); }
+    .replay-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(17, 24, 39, 0.52);
+      display: none;
+      z-index: 40;
+    }
+    .replay-backdrop.open { display: block; }
+    .replay-panel {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: min(560px, 100vw);
+      height: 100vh;
+      background: #0b1020;
+      color: #e5e7eb;
+      box-shadow: -20px 0 40px rgba(0,0,0,0.28);
+      transform: translateX(100%);
+      transition: transform 160ms ease;
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+    }
+    .replay-panel.open { transform: translateX(0); }
+    .replay-panel-header {
+      padding: 1rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: flex-start;
+    }
+    .replay-panel-title { font-weight: 800; line-height: 1.3; }
+    .replay-panel-subtitle { color: #9ca3af; font-size: 0.85rem; margin-top: 0.25rem; }
+    .replay-controls {
+      display: flex;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+      flex-wrap: wrap;
+    }
+    .timeline {
+      padding: 1rem;
+      overflow: auto;
+      font-family: 'Fira Code', 'Consolas', monospace;
+      font-size: 0.82rem;
+    }
+    .timeline-line {
+      display: grid;
+      grid-template-columns: 76px 1fr;
+      gap: 0.75rem;
+      padding: 0.65rem 0;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      opacity: 0;
+      transform: translateY(4px);
+      animation: lineIn 120ms ease forwards;
+    }
+    .timeline-time { color: #60a5fa; }
+    .timeline-label { color: #f9fafb; font-weight: 800; }
+    .timeline-detail { color: #cbd5e1; margin-top: 0.15rem; white-space: pre-wrap; word-break: break-word; }
+    .timeline-extra {
+      margin-top: 0.5rem;
+      color: #a7f3d0;
+      background: rgba(255,255,255,0.06);
+      border-radius: 6px;
+      padding: 0.55rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 220px;
+      overflow: auto;
+    }
+    @keyframes lineIn {
+      to { opacity: 1; transform: translateY(0); }
+    }
     
     /* Footer */
     .footer {
@@ -257,6 +376,7 @@ export async function generateHTML(report, outputPath) {
       body { padding: 1rem; }
       .header { flex-direction: column; text-align: center; }
       .stats-grid { grid-template-columns: 1fr 1fr; }
+      .replay-panel { width: 100vw; }
     }
   </style>
 </head>
@@ -287,7 +407,7 @@ export async function generateHTML(report, outputPath) {
       </div>
       <div class="stat-card">
         <h3>Agents Run</h3>
-        <div class="stat-value">${summary.agentsRun || 'N/A'}</div>
+        <div class="stat-value">${agentsRun}</div>
       </div>
       <div class="stat-card">
         <h3>Severity Breakdown</h3>
@@ -298,6 +418,16 @@ export async function generateHTML(report, outputPath) {
           ${severityCounts.low > 0 ? `<span class="severity-pill" style="background:${severityColors.low}">${severityCounts.low} Low</span>` : ''}
           ${severityCounts.info > 0 ? `<span class="severity-pill" style="background:${severityColors.info}">${severityCounts.info} Info</span>` : ''}
           ${findings.length === 0 ? '<span style="color:#6b7280;font-size:0.85rem">No issues found</span>' : ''}
+        </div>
+      </div>
+      <div class="stat-card">
+        <h3>Sandbox Replay</h3>
+        <div class="stat-value">${sandboxSummary.status ? escapeHtml(sandboxSummary.status).replace(/_/g, ' ') : 'Off'}</div>
+        <div class="severity-row">
+          ${sandboxSummary.confirmed_exploitable ? `<span class="severity-pill" style="background:#dc2626">${sandboxSummary.confirmed_exploitable} confirmed</span>` : ''}
+          ${sandboxSummary.probably_safe ? `<span class="severity-pill" style="background:#16a34a">${sandboxSummary.probably_safe} safe</span>` : ''}
+          ${sandboxSummary.could_not_verify ? `<span class="severity-pill" style="background:#ca8a04">${sandboxSummary.could_not_verify} unverified</span>` : ''}
+          ${!sandboxSummary.status ? '<span style="color:#6b7280;font-size:0.85rem">Run with --sandbox</span>' : ''}
         </div>
       </div>
     </div>
@@ -328,6 +458,7 @@ export async function generateHTML(report, outputPath) {
       
       ${findings.map((f, idx) => {
         const sev = (f.severity || 'info').toLowerCase();
+        const verification = f.sandbox_verification;
         return `
         <div class="finding-card">
           <div class="finding-header" style="border-color: ${severityColors[sev] || severityColors.info}; background: ${severityBgColors[sev] || severityBgColors.info}">
@@ -344,7 +475,14 @@ export async function generateHTML(report, outputPath) {
           <div class="finding-body">
             ${f.description ? `<p>${escapeHtml(f.description)}</p>` : ''}
             ${f.evidence || f.code ? `<div class="code-block">${escapeHtml(f.evidence || f.code)}</div>` : ''}
-            ${f.recommendation || f.fix ? `<div class="recommendation"><strong>💡 Recommendation:</strong> ${escapeHtml(f.recommendation || f.fix)}</div>` : ''}
+            ${verification ? `
+            <div class="verification-row">
+              <span class="verification-badge ${escapeHtml(verification.status)}">${escapeHtml(verification.badge || verification.status)}</span>
+              <button class="replay-button" data-replay-index="${idx}" type="button">Replay attack</button>
+            </div>
+            <p>${escapeHtml(verification.reason || '')}</p>
+            ` : ''}
+            ${f.recommendation || f.fix || f.remediation ? `<div class="recommendation"><strong>💡 Recommendation:</strong> ${escapeHtml(f.recommendation || f.fix || f.remediation)}</div>` : ''}
           </div>
         </div>
         `;
@@ -356,6 +494,125 @@ export async function generateHTML(report, outputPath) {
       <p>Generated by SecuraScan • AI-Powered Security Scanner</p>
     </div>
   </div>
+  <div class="replay-backdrop" id="replayBackdrop"></div>
+  <aside class="replay-panel" id="replayPanel" aria-hidden="true">
+    <div class="replay-panel-header">
+      <div>
+        <div class="replay-panel-title" id="replayTitle">Sandbox Replay</div>
+        <div class="replay-panel-subtitle" id="replaySubtitle"></div>
+      </div>
+      <button class="panel-button secondary" id="replayClose" type="button">Close</button>
+    </div>
+    <div class="replay-controls">
+      <button class="panel-button" id="replayPlay" type="button">Play</button>
+      <button class="panel-button secondary" id="replaySlow" type="button">0.5x</button>
+      <button class="panel-button secondary" id="replayInstant" type="button">Show all</button>
+    </div>
+    <div class="timeline" id="replayTimeline"></div>
+  </aside>
+  <script id="sandboxReplayData" type="application/json">${replayJson}</script>
+  <script>
+    const replayData = JSON.parse(document.getElementById('sandboxReplayData').textContent || '[]');
+    const replayByIndex = new Map(replayData.map(item => [String(item.index), item]));
+    const panel = document.getElementById('replayPanel');
+    const backdrop = document.getElementById('replayBackdrop');
+    const title = document.getElementById('replayTitle');
+    const subtitle = document.getElementById('replaySubtitle');
+    const timelineEl = document.getElementById('replayTimeline');
+    let activeReplay = null;
+    let timers = [];
+    let speed = 1;
+
+    function clearTimers() {
+      timers.forEach(timer => clearTimeout(timer));
+      timers = [];
+    }
+
+    function closeReplay() {
+      clearTimers();
+      panel.classList.remove('open');
+      backdrop.classList.remove('open');
+      panel.setAttribute('aria-hidden', 'true');
+    }
+
+    function lineText(entry) {
+      return [entry.result, entry.attack, entry.request, entry.response]
+        .filter(Boolean)
+        .map(value => String(value))
+        .join('\\n');
+    }
+
+    function appendLine(entry) {
+      const row = document.createElement('div');
+      row.className = 'timeline-line';
+
+      const time = document.createElement('div');
+      time.className = 'timeline-time';
+      time.textContent = entry.timestamp || '00:00:00';
+
+      const content = document.createElement('div');
+      const label = document.createElement('div');
+      label.className = 'timeline-label';
+      label.textContent = entry.label || 'Event';
+      const detail = document.createElement('div');
+      detail.className = 'timeline-detail';
+      detail.textContent = entry.detail || '';
+      content.appendChild(label);
+      content.appendChild(detail);
+
+      const extraText = lineText(entry);
+      if (extraText) {
+        const extra = document.createElement('div');
+        extra.className = 'timeline-extra';
+        extra.textContent = extraText;
+        content.appendChild(extra);
+      }
+
+      row.appendChild(time);
+      row.appendChild(content);
+      timelineEl.appendChild(row);
+      timelineEl.scrollTop = timelineEl.scrollHeight;
+    }
+
+    function renderReplay(instant = false) {
+      if (!activeReplay) return;
+      clearTimers();
+      timelineEl.innerHTML = '';
+      const entries = activeReplay.verification.timeline || [];
+      entries.forEach((entry, index) => {
+        const delay = instant ? 0 : Math.min(1800, Math.max(120, (entry.offset_ms || index * 350) / speed));
+        timers.push(setTimeout(() => appendLine(entry), delay));
+      });
+    }
+
+    function openReplay(index) {
+      activeReplay = replayByIndex.get(String(index));
+      if (!activeReplay) return;
+      speed = 1;
+      title.textContent = activeReplay.title;
+      const verification = activeReplay.verification || {};
+      subtitle.textContent = (verification.badge || verification.status || 'Sandbox replay') + ' - ' + (verification.reason || '');
+      panel.classList.add('open');
+      backdrop.classList.add('open');
+      panel.setAttribute('aria-hidden', 'false');
+      renderReplay(false);
+    }
+
+    document.querySelectorAll('[data-replay-index]').forEach(button => {
+      button.addEventListener('click', () => openReplay(button.getAttribute('data-replay-index')));
+    });
+    document.getElementById('replayClose').addEventListener('click', closeReplay);
+    backdrop.addEventListener('click', closeReplay);
+    document.getElementById('replayPlay').addEventListener('click', () => {
+      speed = 1;
+      renderReplay(false);
+    });
+    document.getElementById('replaySlow').addEventListener('click', () => {
+      speed = 0.5;
+      renderReplay(false);
+    });
+    document.getElementById('replayInstant').addEventListener('click', () => renderReplay(true));
+  </script>
 </body>
 </html>`;
 

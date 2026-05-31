@@ -13,6 +13,7 @@ import { scanLocalDirectory } from './ingestion/localScanner.js';
 
 // Agent modules
 import { runOrchestrator } from './agents/orchestrator.js';
+import { verifyFindingsInSandbox } from './sandbox/verifier.js';
 import * as secretsAgent from './agents/specialists/secrets.js';
 import * as sqliAgent from './agents/specialists/sqli.js';
 import * as xssAgent from './agents/specialists/xss.js';
@@ -142,6 +143,9 @@ ${colors.bright}EXAMPLES:${colors.reset}
   ${colors.gray}# Output report to JSON + PDF${colors.reset}
   node cli.js scan . --output report.json
 
+  ${colors.gray}# Replay exploitable findings in a Docker sandbox${colors.reset}
+  node cli.js scan ./node-app --sandbox --output report.json
+
 ${colors.bright}CONFIG OPTIONS:${colors.reset}
   --provider <provider>    ${colors.gray}anthropic, openai, or gemini${colors.reset}
   --model <model>          ${colors.gray}e.g., claude-opus-4-5, gpt-4o, gemini-2.0-flash${colors.reset}
@@ -152,6 +156,7 @@ ${colors.bright}SCAN OPTIONS:${colors.reset}
   --output, -o <file>      ${colors.gray}Save report to JSON + PDF${colors.reset}
   --pdf <file>             ${colors.gray}Save PDF report only${colors.reset}
   --json                   ${colors.gray}Output raw JSON (no formatting)${colors.reset}
+  --sandbox                ${colors.gray}Replay SQLi, IDOR, and exposed endpoint findings in Docker${colors.reset}
   --verbose, -v            ${colors.gray}Show detailed progress${colors.reset}
 `);
 }
@@ -219,6 +224,7 @@ function parseArgs(args) {
 async function runScan(codebaseText, llmConfig, options = {}) {
   const verbose = options.verbose || options.v;
   const mode = options.mode || 'basic';
+  const sandboxEnabled = options.sandbox || options.verify || process.env.SECURASCAN_SANDBOX === '1';
   const startTime = Date.now();
   
   console.log(`\x1b[90m   Scan mode: ${mode}\x1b[0m`);
@@ -278,6 +284,17 @@ async function runScan(codebaseText, llmConfig, options = {}) {
     if (verbose) logStep('Generating report...', 'start');
     
     const finalReport = await reportAgent.run(orchestratorResult, agentFindings, llmConfig);
+
+    if (sandboxEnabled) {
+      if (verbose) logStep('Running sandbox exploit replay...', 'start');
+      const sandboxSummary = await verifyFindingsInSandbox(finalReport, options.targetPath, { verbose });
+      if (verbose) {
+        const replayed = sandboxSummary.total_replayed || 0;
+        const confirmed = sandboxSummary.confirmed_exploitable || 0;
+        const reason = sandboxSummary.reason ? ` (${sandboxSummary.reason})` : '';
+        logStep(`Sandbox replay complete: ${confirmed}/${replayed} confirmed${reason}`, sandboxSummary.status === 'failed' ? 'error' : 'done');
+      }
+    }
     
     const endTime = Date.now();
     finalReport.scan_metadata = finalReport.scan_metadata || {};
@@ -347,6 +364,12 @@ function printReport(report) {
       console.log(`\n  ${sevColor}[${finding.severity.toUpperCase()}]${colors.reset} ${finding.type}`);
       console.log(`  ${colors.gray}File: ${finding.file}:${finding.line}${colors.reset}`);
       console.log(`  ${finding.description}`);
+      if (finding.sandbox_verification) {
+        const verification = finding.sandbox_verification;
+        const badgeColor = verification.status === 'confirmed_exploitable' ? colors.red :
+                           verification.status === 'probably_safe' ? colors.green : colors.yellow;
+        console.log(`  ${badgeColor}Sandbox: ${verification.badge} — ${verification.reason}${colors.reset}`);
+      }
       if (finding.remediation) {
         console.log(`  ${colors.green}→ ${finding.remediation}${colors.reset}`);
       }
@@ -357,6 +380,11 @@ function printReport(report) {
   // Scan Metadata
   console.log(`${colors.gray}───────────────────────────────────────────────────────────────${colors.reset}`);
   console.log(`${colors.gray}Scan completed in ${(meta.scan_duration_ms / 1000).toFixed(1)}s | Agents: ${meta.agents_invoked?.join(', ') || 'none'}${colors.reset}`);
+  if (report.sandbox_summary) {
+    const sandbox = report.sandbox_summary;
+    const reason = sandbox.reason ? ` | ${sandbox.reason}` : '';
+    console.log(`${colors.gray}Sandbox replay: ${sandbox.status} | ${sandbox.confirmed_exploitable || 0} confirmed, ${sandbox.probably_safe || 0} probably safe, ${sandbox.could_not_verify || 0} unverified${reason}${colors.reset}`);
+  }
   console.log();
 }
 
@@ -421,6 +449,7 @@ async function main() {
   const llmConfig = { apiKey, provider, model };
   
   let codebaseText;
+  let scanTargetPath = null;
   
   if (command === 'scan') {
     const targetPath = parsed._[1] || '.';
@@ -435,6 +464,7 @@ async function main() {
     
     logStep('Scanning local directory...', 'start');
     codebaseText = await scanLocalDirectory(absolutePath);
+    scanTargetPath = absolutePath;
     logStep('Directory scanned', 'done');
     
   } else if (command === 'scan-github') {
@@ -480,7 +510,10 @@ async function main() {
   }
   
   // Run the scan
-  const report = await runScan(codebaseText, llmConfig, parsed);
+  const report = await runScan(codebaseText, llmConfig, {
+    ...parsed,
+    targetPath: scanTargetPath
+  });
   
   // Output
   if (parsed.json) {
